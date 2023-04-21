@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class Inferencer:
     def __init__(self, cfg, accelerator=None) -> None:
+        self.cfg = cfg
         self.dataset_reader = hu.instantiate(cfg.dataset_reader)
         self.gen_field = cfg.dataset_reader.field
 
@@ -45,6 +46,7 @@ class Inferencer:
         dataloader = DataLoader(self.dataset_reader, batch_size=cfg.batch_size, collate_fn=co)
 
         model = hu.instantiate(cfg.model_config.model).eval()
+        import pdb; pdb.set_trace()
         model = self.accelerator.prepare(model)
 
         if hasattr(model, "module"):
@@ -64,8 +66,8 @@ class Inferencer:
             metadata = entry.pop("metadata")
             if 'choices' in self.dataset_reader.dataset_wrapper.field_getter:
                 # for classification tasks, we compare the ppl of provided generation_choices as generation
-                choices = [self.dataset_reader.dataset_wrapper.get_field(meta, 'choices') for meta in metadata]
-                choices_list = list(zip(*choices))
+                choices = [self.dataset_reader.dataset_wrapper.get_field(meta, 'choices') for meta in metadata] # djz: [[all option]*N]
+                choices_list = list(zip(*choices)) # djz：[[op0]*N,[op1]*N...]
                 preds = ppl_generate([meta['prompt'] for meta in metadata],
                                      model=self.model,
                                      tokenizer=self.dataset_reader.tokenizer,
